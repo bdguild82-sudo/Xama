@@ -1,0 +1,130 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "XamasHitboxUI"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 60)
+frame.Position = UDim2.new(0.05, 0, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.BorderSizePixel = 4
+frame.Parent = gui
+
+-- Rainbow border
+task.spawn(function()
+	while true do
+		for h = 0,1,0.01 do
+			frame.BorderColor3 = Color3.fromHSV(h,1,1)
+			task.wait(0.03)
+		end
+	end
+end)
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,12)
+corner.Parent = frame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Text = "Xamas Hitbox Sab"
+title.Size = UDim2.new(1,0,0,20)
+title.Position = UDim2.new(0,0,0,0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = frame
+
+-- Hitbox Button
+local hitboxBtn = Instance.new("TextButton")
+hitboxBtn.Size = UDim2.new(0.9,0,0,30)
+hitboxBtn.Position = UDim2.new(0.05,0,0.3,0)
+hitboxBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+hitboxBtn.TextColor3 = Color3.new(1,1,1)
+hitboxBtn.Font = Enum.Font.GothamBold
+hitboxBtn.TextSize = 18
+hitboxBtn.Text = "Hitbox: ON"
+hitboxBtn.Parent = frame
+
+local c2 = Instance.new("UICorner")
+c2.CornerRadius = UDim.new(0,10)
+c2.Parent = hitboxBtn
+
+-- Dragging GUI
+local dragging
+local dragStart
+local startPos
+
+frame.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = i.Position
+		startPos = frame.Position
+	end
+end)
+
+frame.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(i)
+	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = i.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-----------------------------------
+-- Hitbox code
+-----------------------------------
+local size = Vector3.new(9,9,10)
+local hitboxEnabled = true
+local currentHB = nil
+local hbConnection
+
+local function makeHitbox(char)
+	local root = char:WaitForChild("HumanoidRootPart")
+	if char:FindFirstChild("Hitbox") then char.Hitbox:Destroy() end
+	if hbConnection then hbConnection:Disconnect() end
+	if not hitboxEnabled then return end
+	
+	local hb = Instance.new("Part")
+	hb.Name = "Hitbox"
+	hb.Size = size
+	hb.CFrame = root.CFrame
+	hb.Anchored = true
+	hb.CanCollide = false
+	hb.Transparency = 0.9
+	hb.Color = Color3.fromRGB(255,50,50)
+	hb.Material = Enum.Material.Neon
+	hb.Parent = char
+	currentHB = hb
+	
+	hbConnection = game:GetService("RunService").Heartbeat:Connect(function()
+		if not hb or not hb.Parent or not root or not root.Parent then return end
+		if not hitboxEnabled then hb:Destroy() return end
+		hb.CFrame = root.CFrame
+	end)
+end
+
+player.CharacterAdded:Connect(makeHitbox)
+if character then makeHitbox(character) end
+
+-- Hitbox Button Functionality
+hitboxBtn.MouseButton1Click:Connect(function()
+	hitboxEnabled = not hitboxEnabled
+	if not hitboxEnabled then
+		if currentHB then currentHB:Destroy() end
+		hitboxBtn.Text = "Hitbox: OFF"
+	else
+		if player.Character then makeHitbox(player.Character) end
+		hitboxBtn.Text = "Hitbox: ON"
+	end
+end)
